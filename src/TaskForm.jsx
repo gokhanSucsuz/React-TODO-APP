@@ -1,18 +1,29 @@
 /* eslint-disable react/prop-types */
 import { v4 as uuidv4 } from "uuid";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import TaskList from "./TaskList";
 
 export default function TaskForm() {
   const emptyForm = {
     task: "",
-    priority: false
+    priority: false,
+    isDone: false
   };
   const [formData, setFormData] = useState(emptyForm);
   const [tasks, setTasks] = useState([]);
+  const [taskChangeCount, setTaskChangeCount] = useState(0)
+
+  useEffect(()=>{
+    const localStorageTasks = JSON.parse(localStorage.getItem("tasks"))
+    setTasks(localStorageTasks ?? [])
+  }, [])
+
+  useEffect(()=>{
+    if(taskChangeCount > 0)
+    localStorage.setItem("tasks", JSON.stringify(tasks))
+  }, [taskChangeCount])
 
   const handleInputChange = (event) => {
-    console.log(event.target.checked + formData.priority);
     setFormData((prev) => {
       return {
         ...prev,
@@ -24,12 +35,23 @@ export default function TaskForm() {
     });
   };
   const removeItem = (uuid) => {
-    console.log(uuid);
     setTasks((prev) => prev.filter((item) => item.uuid !== uuid));
+        setFormData(emptyForm);
+        setTaskChangeCount(prev => prev + 1)    
   };
   const editItem = (uuid) => {
     const editedItem = tasks.find((item) => item.uuid === uuid);
     setFormData({ ...editedItem, isEdited: true });
+    setTaskChangeCount(prev => prev + 1)
+  };
+  const doneItem = (uuid) => {
+    const itemIndex = tasks.findIndex((item) => item.uuid === uuid);
+      const task = tasks[itemIndex]
+      task.isDone = !task.isDone
+      const newTasks = tasks.slice();
+      newTasks[itemIndex] = task
+      setTasks(newTasks);
+      setTaskChangeCount(prev => prev + 1)
   };
   function handleFormSubmit(event) {
     event.preventDefault();
@@ -44,12 +66,12 @@ export default function TaskForm() {
     }
     setFormData(emptyForm);
     event.target.reset();
-    console.log(formData)
+    setTaskChangeCount(prev => prev + 1)
   }
   return (
     <>
       <div className="col-sm-7 border rounded-3 shadow-lg py-3 my-3 mx-3  bg-white mx-auto">
-        <h1 className="d-flex justify-content-center py-3 fw-bolder shadow-lg rounded-3 my-3">TODO APP</h1>
+        <h1 className="d-flex justify-content-center py-3 fw-bolder shadow-lg rounded-3 my-3 text-dark-emphasis">React TODO APP</h1>
         <form className="border border-3 p-3 rounded-3 shadow-sm" onSubmit={handleFormSubmit}>
           <div className="row mb-3">
             <label htmlFor="task" className="col-sm-2 col-form-label">
@@ -89,7 +111,7 @@ export default function TaskForm() {
         </form>
       </div>
       
-        <TaskList tasks={tasks} removeItem={removeItem} editItem={editItem} />
+        <TaskList tasks={tasks} removeItem={removeItem} editItem={editItem} doneItem={doneItem} />
 
     </>
   );
